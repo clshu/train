@@ -1,17 +1,7 @@
 // Global Variables
 var rows = [];
-// 1. Initialize Firebase
+var database;
 
-   // Initialize Firebase
-  var config = {
-    apiKey: "AIzaSyCKu8RakHAfCjb62ANA4wV9t_KM3k6JNdw",
-    authDomain: "train-schedule-95105.firebaseapp.com",
-    databaseURL: "https://train-schedule-95105.firebaseio.com",
-    storageBucket: "train-schedule-95105.appspot.com",
-  };
-  firebase.initializeApp(config);
-
-var database = firebase.database();
 // Functions
 function calculated(obj) {
 	var nextArrival = "0:00 AM";
@@ -20,7 +10,7 @@ function calculated(obj) {
 	var todaysFirstTrainTime = moment(obj.firstTrainTime, "HH:mm");
 	
 	var diffMinutes = moment().diff(todaysFirstTrainTime, "minutes");
-	console.log('diff: ' + diffMinutes);
+	//console.log('diff: ' + diffMinutes);
 	if (diffMinutes < 0) {
 		// current time is earlier than todaysFirstTrainTime
 		// then nextArrival is todaysFirstTrainTime
@@ -37,6 +27,25 @@ function calculated(obj) {
 		minutesAway: minutesAway
 	};
 }
+function refreshIt() {
+	var tableRows = $('#trainTable > tbody > tr');
+
+	tableRows.each(function(index) {
+		var tr = $(this)
+		var calculatedObj = calculated(rows[index]);
+		tr.children().each(function(i) {
+			var td = $(this);
+			//console.log(td);
+			if (td.hasClass('nextArrival')) {
+				td.html(calculatedObj.nextArrival);
+			}
+			if (td.hasClass('minutesAway')) {
+				td.html(calculatedObj.minutesAway)
+			}
+		});
+
+	});
+}
 function createTableRow(obj) {
 	var calculatedObj = calculated(obj);
 
@@ -47,58 +56,74 @@ function createTableRow(obj) {
 	tr.append(td);
 	td = $('<td>').html(obj.frequency);
 	tr.append(td);
-	td = $('<td>').attr('id', 'nextArrival').html(calculatedObj.nextArrival);
+	td = $('<td>').addClass('nextArrival').html(calculatedObj.nextArrival);
 	tr.append(td);
-	td = $('<td>').attr('id', 'minutesAway').html(calculatedObj.minutesAway);
+	td = $('<td>').addClass('minutesAway').html(calculatedObj.minutesAway);
 	tr.append(td);
 	$("#trainTable > tbody").append(tr);
 
 }
 
-// 2. Button for adding Train Info
-$("#addTraineBtn").on("click", function(){
+// Execution
+$(document).ready(readyFn);
+function readyFn() {
+	// 1. Initialize Firebase
+  	var config = {
+ 		apiKey: "AIzaSyCKu8RakHAfCjb62ANA4wV9t_KM3k6JNdw",
+  		authDomain: "train-schedule-95105.firebaseapp.com",
+   		databaseURL: "https://train-schedule-95105.firebaseio.com",
+   		storageBucket: "train-schedule-95105.appspot.com",
+ 	};
 
-	// Grabs user input
-	var trainName = $("#trainNameInput").val().trim();
-	var destination = $("#destinationInput").val().trim();
-	var firstTrainTime = $("#firstTrainTimeInput").val().trim();
-	var frequency = parseInt($("#frequencyInput").val().trim());
+ 	firebase.initializeApp(config);
 
-	// Creates local "temporary" object for holding schedule data
-	var schedule = {
-		trainName:  trainName,
-		destination: destination,
-		firstTrainTime: firstTrainTime, // save it in "HH:mm" format
-		frequency: frequency
-	};
+	database = firebase.database();
 
-	// Uploads schedule data to the database
-	database.ref().push(schedule);
+	// 2. Button for adding Train Info
+	$("#addTraineBtn").on("click", function(){
 
-	// Clears all of the text-boxes
-	$("#trainNameInput").val("");
-	$("#destinationInput").val("");
-	$("#firstTrainTimeInput").val("");
-	$("#frequencyInput").val("");
+		// Grabs user input
+		var trainName = $("#trainNameInput").val().trim();
+		var destination = $("#destinationInput").val().trim();
+		var firstTrainTime = $("#firstTrainTimeInput").val().trim();
+		var frequency = parseInt($("#frequencyInput").val().trim());
 
-	// Prevents moving to new page
-	return false;
-});
+		// Creates local "temporary" object for holding schedule data
+		var schedule = {
+			trainName:  trainName,
+			destination: destination,
+			firstTrainTime: firstTrainTime, // save it in "HH:mm" format
+			frequency: frequency
+		};
 
+		// Uploads schedule data to the database
+		database.ref().push(schedule);
 
-// 3. Create Firebase event for adding train info to the database and a row in the html when a user adds an entry
-database.ref().on("child_added", function(childSnapshot, prevChildKey){
+		// Clears all of the text-boxes
+		$("#trainNameInput").val("");
+		$("#destinationInput").val("");
+		$("#firstTrainTimeInput").val("");
+		$("#frequencyInput").val("");
 
-	console.log(childSnapshot.val());
-	if (childSnapshot.val() == null) return;
-
-	rows.push({
-		firstTrainTime: childSnapshot.val().firstTrainTime,
-		frequency: childSnapshot.val().frequency  
+		// Prevents moving to new page
+		return false;
 	});
-	createTableRow(childSnapshot.val());
-});
 
+	// 3. Create Firebase event for adding train info to the database and a row in the html when a user adds an entry
+	database.ref().on("child_added", function(childSnapshot, prevChildKey){
 
+		//console.log(childSnapshot.val());
+		if (childSnapshot.val() == null) return;
+
+		rows.push({
+			firstTrainTime: childSnapshot.val().firstTrainTime,
+			frequency: childSnapshot.val().frequency  
+		});
+		createTableRow(childSnapshot.val());
+	});
+
+	// start timer
+	setInterval(refreshIt, 60000);
+}
 
 
