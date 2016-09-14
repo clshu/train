@@ -117,6 +117,10 @@ function readyFn() {
 
 		rows.push(childSnapshot.val());
 		createTableRow(childSnapshot.val());
+		// Handle the errors
+	}, function(errorObject){
+
+	console.log("Errors handled: " + errorObject.code)
 	});
 
 	// start timer
