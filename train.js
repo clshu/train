@@ -115,10 +115,7 @@ function readyFn() {
 		//console.log(childSnapshot.val());
 		if (childSnapshot.val() == null) return;
 
-		rows.push({
-			firstTrainTime: childSnapshot.val().firstTrainTime,
-			frequency: childSnapshot.val().frequency  
-		});
+		rows.push(childSnapshot.val());
 		createTableRow(childSnapshot.val());
 	});
 
